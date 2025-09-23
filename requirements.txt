@@ -1,0 +1,4 @@
+bs4
+html2text
+sentence-transformers
+psycopg2-binary

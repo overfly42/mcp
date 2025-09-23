@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: ankane/pgvector:latest   # PostgreSQL mit pgvector-Erweiterung
+    container_name: pgvector-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: mydb
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data:/var/lib/postgresql/data
+      - ./config:/etc/postgresql/conf.d
