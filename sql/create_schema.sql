@@ -1,85 +1,83 @@
-CREATE TABLE entities (
-    id SERIAL PRIMARY KEY,
-    title TEXT NOT NULL,
-    category TEXT CHECK (category IN ('Monster', 'Klasse', 'Fertigkeit', 'Talent', 'Zauber', 'Ausrüstung', 'Regel')),
-    source TEXT,
-    content TEXT
-);
-CREATE TABLE monster (
-    id SERIAL PRIMARY KEY,
-    entity_id INT REFERENCES entities(id) ON DELETE CASCADE,
-    name TEXT NOT NULL,
-    hg NUMERIC(4,2),           -- Herausforderungsgrad (z. B. 2 oder 1/2)
-    typ TEXT,
-    groesse TEXT,
-    gesinnung TEXT,
-    rk INT,
-    tp INT,
-    initiative INT,
-    bewegung TEXT,
-    angriffe TEXT,
-    schadensreduktion TEXT,
-    resistenz TEXT,
-    immunitaet TEXT,
-    zauberresistenz TEXT
-);
-CREATE TABLE monster_fertigkeiten (
-    id SERIAL PRIMARY KEY,
-    monster_id INT REFERENCES monster(id) ON DELETE CASCADE,
-    fertigkeit TEXT NOT NULL,
-    wert TEXT
-);
-CREATE TABLE monster_besonderheiten (
-    id SERIAL PRIMARY KEY,
-    monster_id INT REFERENCES monster(id) ON DELETE CASCADE,
-    bezeichnung TEXT,
-    beschreibung TEXT
-);
-CREATE TABLE klassen (
-    id SERIAL PRIMARY KEY,
-    entity_id INT REFERENCES entities(id) ON DELETE CASCADE,
-    name TEXT NOT NULL,
-    rolle TEXT,
-    gesinnung TEXT,
-    trefferwuerfel TEXT,        -- z. B. W6
-    startgold TEXT,
-    fertigkeiten_pro_stufe TEXT,
-    grundangriffsbonus TEXT,
-    rettungswuerfe TEXT,
-    zauberfaehig BOOLEAN,
-    zauberquelle TEXT,
-    zauberliste TEXT,
-    besonderheiten TEXT
-);
-CREATE TABLE klassen_progression (
-    id SERIAL PRIMARY KEY,
-    klasse_id INT REFERENCES klassen(id) ON DELETE CASCADE,
-    stufe INT,
-    grundangriffsbonus TEXT,
-    ref TEXT,
-    wil TEXT,
-    zaeh TEXT,
-    spezial TEXT,
-    zauber_pro_tag JSONB -- Flexibel für Spalten 1–9
-);
-CREATE TABLE klassen_bekannte_zauber (
-    id SERIAL PRIMARY KEY,
-    klasse_id INT REFERENCES klassen(id) ON DELETE CASCADE,
-    stufe INT,
-    grad_0 INT,
-    grad_1 INT,
-    grad_2 INT,
-    grad_3 INT,
-    grad_4 INT,
-    grad_5 INT,
-    grad_6 INT,
-    grad_7 INT,
-    grad_8 INT,
-    grad_9 INT
-);
+-- Erweiterung (falls noch nicht installiert)
 CREATE EXTENSION IF NOT EXISTS vector;
-CREATE TABLE embeddings (
-    entity_id INT REFERENCES entities(id) ON DELETE CASCADE,
-    embedding VECTOR(384) -- Dimension muss zu deinem SentenceTransformer passen
+
+-- =========================
+-- Haupttabelle: entities
+-- =========================
+CREATE TABLE public.entities (
+    id SERIAL PRIMARY KEY,
+    entity_type TEXT NOT NULL,
+    name TEXT NOT NULL,
+    source_file TEXT NOT NULL,
+    content TEXT NOT NULL,
+    metadata JSONB NOT NULL DEFAULT '{}',
+    source_file_hash TEXT NOT NULL,
+    embedding VECTOR(384)
 );
-CREATE INDEX ON embeddings USING ivfflat (embedding vector_l2_ops) WITH (lists = 100);
+
+-- Index für Embeddings (ANN Suche nach ähnlichen Entities)
+CREATE INDEX entities_embedding_idx
+    ON public.entities
+    USING ivfflat (embedding vector_l2_ops)
+    WITH (lists = 100);
+
+-- Optional: schneller Zugriff nach Typ + Name
+CREATE INDEX entities_type_name_idx
+    ON public.entities (entity_type, name);
+
+-- =========================
+-- Segmente (Chunks)
+-- =========================
+CREATE TABLE public.segments (
+    id SERIAL PRIMARY KEY,
+    entity_id INT NOT NULL REFERENCES public.entities(id) ON DELETE CASCADE,
+    chunk_index INT NOT NULL,
+    chunk_text TEXT NOT NULL,
+    chunk_hash TEXT NOT NULL,
+    embedding VECTOR(384)
+);
+
+-- Index für Chunk-Suche (ANN Suche nach ähnlichen Segmenten)
+CREATE INDEX segments_embedding_idx
+    ON public.segments
+    USING ivfflat (embedding vector_l2_ops)
+    WITH (lists = 100);
+
+-- Optional: schneller Zugriff pro Entity + Index
+CREATE INDEX segments_entity_chunk_idx
+    ON public.segments (entity_id, chunk_index);
+
+-- =========================
+-- Monster-Daten
+-- =========================
+CREATE TABLE public.monsters (
+    entity_id INT PRIMARY KEY REFERENCES public.entities(id) ON DELETE CASCADE,
+    cr TEXT,
+    size TEXT,
+    type TEXT,
+    alignment TEXT,
+    ac TEXT,
+    hp TEXT,
+    speed TEXT,
+    abilities JSONB DEFAULT '{}',
+    defenses JSONB DEFAULT '{}',
+    actions JSONB DEFAULT '{}'
+);
+
+-- =========================
+-- Spell-Daten
+-- =========================
+CREATE TABLE public.spells (
+    entity_id INT PRIMARY KEY REFERENCES public.entities(id) ON DELETE CASCADE,
+    level INT,
+    school TEXT,
+    casting_time TEXT,
+    range TEXT,
+    components TEXT,
+    duration TEXT,
+    classes JSONB DEFAULT '[]'
+);
+
+-- Index auf Spell-Level + Schule für schnelle Filterung
+CREATE INDEX spells_level_school_idx
+    ON public.spells (level, school);
