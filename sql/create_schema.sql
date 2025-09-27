@@ -83,8 +83,3 @@ CREATE TABLE embeddings (
     embedding VECTOR(384) -- Dimension muss zu deinem SentenceTransformer passen
 );
 CREATE INDEX ON embeddings USING ivfflat (embedding vector_l2_ops) WITH (lists = 100);
-
-
-
-
-
