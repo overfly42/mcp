@@ -82,6 +82,8 @@ def crawl(base_url, output_dir, progress_file):
             url = progress["to_visit"].pop(0)
             if url in progress["visited"]:
                 continue
+            if url.endswith('/print'):
+                continue
 
             print(f"Lade: {url}")
             html = download_and_convert(url, output_dir)

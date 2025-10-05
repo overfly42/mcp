@@ -197,7 +197,8 @@ def process_markdown_file(filepath):
         entity_id = insert_entity(filename, category, source, text)
 
     # Embedding erzeugen
-    embedding = create_embedding(text[:2000])  # nur ein Auszug für Performance
+#    embedding = create_embedding(text[:2000])  # nur ein Auszug für Performance
+    embedding = create_embedding(text[11440:])#Ignore table of content
     insert_embedding(entity_id, embedding)
 
     conn.commit()

@@ -90,7 +90,7 @@ class DB:
         cur = self.conn.cursor()
         vec = '[' + ','.join(f"{float(x):.6f}" for x in embedding) + ']'
         cur.execute("""
-            INSERT INTO pathfinder.entities (entity_type,name,source_file,content,metadata,source_file_hash,embedding)
+            INSERT INTO public.entities (entity_type,name,source_file,content,metadata,source_file_hash,embedding)
             VALUES (%s,%s,%s,%s,%s,%s,%s::vector)
             RETURNING id
         """, (entity_type, name, source_file, content, json.dumps(metadata), source_hash, vec))
@@ -103,7 +103,7 @@ class DB:
         cur = self.conn.cursor()
         vec = '[' + ','.join(f"{float(x):.6f}" for x in embedding) + ']'
         cur.execute("""
-            INSERT INTO pathfinder.segments (entity_id,chunk_index,chunk_text,chunk_hash,embedding)
+            INSERT INTO public.segments (entity_id,chunk_index,chunk_text,chunk_hash,embedding)
             VALUES (%s,%s,%s,%s,%s::vector)
         """, (entity_id, idx, text, sha1_text(text), vec))
         self.conn.commit()
@@ -112,7 +112,7 @@ class DB:
     def insert_monster(self, entity_id, data: Dict[str, Any]):
         cur = self.conn.cursor()
         cur.execute("""
-            INSERT INTO pathfinder.monsters (entity_id,cr,size,type,alignment,ac,hp,speed,abilities,defenses,actions)
+            INSERT INTO public.monsters (entity_id,cr,size,type,alignment,ac,hp,speed,abilities,defenses,actions)
             VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
             ON CONFLICT (entity_id) DO NOTHING
         """, (entity_id, data.get('cr'), data.get('size'), data.get('type'), data.get('alignment'),
@@ -126,7 +126,7 @@ class DB:
     def insert_spell(self, entity_id, data: Dict[str, Any]):
         cur = self.conn.cursor()
         cur.execute("""
-            INSERT INTO pathfinder.spells (entity_id,level,school,casting_time,range,components,duration,classes)
+            INSERT INTO public.spells (entity_id,level,school,casting_time,range,components,duration,classes)
             VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
             ON CONFLICT (entity_id) DO NOTHING
         """, (entity_id, data.get('level'), data.get('school'), data.get('casting_time'), data.get('range'),
